@@ -131,12 +131,67 @@ def record_event(event_type, task, extra_event_data=None):
         event.update(extra_event_data)
 
     with open(
-        Path(constants.RESULTS_DIRECTORY)
-        / event_type
-        / f"{task_type}-{task.task_id}.json",
-        "w",
+            Path(constants.RESULTS_DIRECTORY)
+            / event_type
+            / f"{task_type}-{task.task_id}.json",
+            "w",
     ) as f:
         f.write(json.dumps(event, default=str, indent=4,))
+
+
+def write_report_for_failure(event_type, task, exception, stack_trace):
+    task_type = task.__class__.__name__
+    task_params = task.param_kwargs
+
+    event = {
+        "event_type": event_type,
+        "task_type": task_type,
+        "task_params": task_params,
+        "params_for_results": task.params_for_results_display(),
+    }
+    if extra_event_data is not None:
+        event.update(extra_event_data)
+
+    with open(
+            Path(constants.REPORTS_DIRECTORY)
+            / f"{task_type}-{task.task_id}-{event_type}.json",
+            "w",
+    ) as f:
+        f.write(f"""<?xml version="1.0" encoding="UTF-8" ?> 
+   <testsuites id="{task.task_id}" name="{task.task_id}" tests="1" failures="1" time="0.001">
+      <testsuite id="{task.task_id}" name="{task.task_id}" tests="1" failures="1" time="0.001">
+         <testcase id="{task.task_id}" name="{task.task_id}" time="0.001">
+            <failure message="{exception}" type="ERROR">
+{stack_trace}
+            </failure>
+         </testcase>
+      </testsuite>
+   </testsuites>""")
+
+
+def write_report(event_type, task):
+    task_type = task.__class__.__name__
+    task_params = task.param_kwargs
+
+    event = {
+        "event_type": event_type,
+        "task_type": task_type,
+        "task_params": task_params,
+        "params_for_results": task.params_for_results_display(),
+    }
+
+    with open(
+            Path(constants.REPORTS_DIRECTORY)
+            / f"{task_type}-{task.task_id}-{event_type}.json",
+            "w",
+    ) as f:
+        f.write(f"""<?xml version="1.0" encoding="UTF-8" ?> 
+   <testsuites id="{task.task_id}" name="{task.task_id}" tests="1" failures="0" time="0.001">
+      <testsuite id="{task.task_id}" name="{task.task_id}" tests="1" failures="0" time="0.001">
+         <testcase id="{task.task_id}" name="{task.task_id}" time="0.001">
+         </testcase>
+      </testsuite>
+   </testsuites>""")
 
 
 @luigi.Task.event_handler(luigi.Event.FAILURE)
@@ -148,6 +203,9 @@ def on_task_failure(task, exception):
         ),
     }
     record_event("failure", task, exception_details)
+    write_report_for_failure("failure", task, type(exception), traceback.format_exception(
+        etype=type(exception), value=exception, tb=exception.__traceback__,
+    ))
 
 
 def print_stats():
@@ -161,6 +219,7 @@ def print_stats():
 def on_task_success(task):
     print_stats()
     record_event("success", task)
+    write_report("success", task)
 
 
 @luigi.Task.event_handler(luigi.Event.TIMEOUT)

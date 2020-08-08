@@ -211,6 +211,7 @@ class ProvisionProductTask(ProvisioningTask):
         }
 
     def run(self):
+        raise Exception("Aghhhhhh")
         logger.info(
             f"[{self.uid}] starting deploy try {self.try_count} of {self.retry_count}"
         )

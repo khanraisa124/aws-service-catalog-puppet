@@ -20,6 +20,7 @@ LAUNCHES = "launches"
 SPOKE_LOCAL_PORTFOLIOS = "spoke-local-portfolios"
 
 RESULTS_DIRECTORY = "results"
+REPORTS_DIRECTORY = "reports/junit"
 
 NO_CHANGE = "NO_CHANGE"
 CHANGE = "CHANGE"
